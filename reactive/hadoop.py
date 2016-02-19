@@ -67,7 +67,7 @@ if HDFS_RELATION:
             }, default_flow_style=False)
             for line in data.splitlines():
                 hookenv.log(line)
-        hdfs.configure_hdfs_base(namenode.namenodes()[0], namenode.port())
+        hdfs.configure_hdfs_base(namenode.namenodes(), namenode.port())
         set_state('hadoop.hdfs.configured')
 
 
