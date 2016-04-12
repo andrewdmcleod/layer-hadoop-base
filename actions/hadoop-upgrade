@@ -6,7 +6,7 @@ export PATH=$PATH:$SAVEPATH
 export JAVA_HOME
 
 current_hadoop_ver=`/usr/lib/hadoop/bin/hadoop version|head -n1|awk '{print $2}'`
-config_hadoop_ver=`config-get version`
+config_hadoop_ver=`config-get hadoop_version`
 new_hadoop_ver=`action-get version`
 cpu_arch=`lscpu|grep -i arch|awk '{print $2}'`
 rollback=`action-get rollback`
