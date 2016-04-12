@@ -12,6 +12,52 @@ cpu_arch=`lscpu|grep -i arch|awk '{print $2}'`
 rollback=`action-get rollback`
 prepare=`action-get prepare`
 query=`action-get query`
+postupgrade=`action-get postupgrade`
+
+if [ `jps | grep -i namenode` ] ; then
+        is_namenode="true"
+else
+        is_namenode="false"
+fi
+
+if [ `jps | grep -i datanode` ] ; then
+        is_datanode="true"
+else
+        is_datanode="false"
+fi
+
+function init_procs () { 
+        # stop or start hadoop procs (jps procs)
+        if [ $1 == "stop" ] ; then
+                i=0
+                unset hadoop_procs
+                while read -r line ; do
+                        hadoop_procs[i]=$(echo $line|awk '{print $2}') ; ((i++)) 
+                done < <(sudo jps|grep -vi jps)
+        fi
+        for proc in ${hadoop_procs[@]} ; do 
+                if [ $proc == "NameNode" ] && [ $1 == "start" ] && [ "$postupgrade" == "" ] ; then
+                        query_upgrade
+                        su hdfs -c "hdfs namenode -rollingUpgrade started &" 
+                elif [ $proc == "NameNode" ] && [ $1 == "start" ] && [ "${postupgrade}" == "downgrade" ] ; then
+                        query_upgrade
+                        su hdfs -c "hadoop-daemon.sh start namenode"
+                elif [ $proc == "DataNode" ] && [ $1 == "stop" ] ; then
+                        query_upgrade
+                        su hdfs -c "hdfs dfsadmin -shutdownDatanode localhost upgrade"
+                else
+                        if [ $1 == "finalize" ] ; then
+                                su hdfs -c "hadoop-daemon.sh start $proc" 
+                        else
+                                su hdfs -c "hadoop-daemon.sh $1 $proc"
+                        fi
+                fi
+        done
+        sleep 2
+        if [ $1 == "stop" ] ; then
+                check_procs
+        fi
+}
 
 function query_upgrade () {
         # check upgrade, if not ready / prepared set failure message and exit
@@ -21,6 +67,19 @@ function query_upgrade () {
                 exit 1
         fi
 }
+
+if [ "${postupgrade}" == "finalize" ] ; then
+        if [ $is_namenode = "false" ] ; then
+                action-set result="Namenode process not detected - please run this action against both namenodes"  
+                exit 1
+        fi
+        su hdfs -c "hdfs dfsadmin -finalizeUpgrade"
+        action-set finalized="true"
+        init_procs stop
+        init_procs finalize
+        status-set active "Ready - upgrade finalized, rollback unavailable" 
+        exit 0
+fi
 
 if [ "$prepare" == true ] ; then
 # check jps to see if namenode is running, if not exit
@@ -36,28 +95,7 @@ if [ "$query" == true ] ; then
         exit 0
 fi
         
-function init_procs () { 
-        # stop or start hadoop procs (jps procs)
-        if [ $1 == "stop" ] ; then
-                i=0
-                unset hadoop_procs
-                while read -r line ; do
-                        hadoop_procs[i]=$(echo $line|awk '{print $2}') ; ((i++)) 
-                done < <(sudo jps|grep -vi jps)
-        fi
-        for proc in ${hadoop_procs[@]} ; do 
-                if [ $proc == "NameNode" ] && [ $1 == "start" ] ; then
-                        query_upgrade
-                        su hdfs -c "hdfs namenode -rollingUpgrade started &" 
-                else
-                        su hdfs -c "hadoop-daemon.sh $1 $proc"
-                fi
-        done
-        sleep 2
-        if [ $1 == "stop" ] ; then
-                check_procs
-        fi
-}
+
 
 function check_procs () {
         if pgrep -f Dproc_ ; then
@@ -81,7 +119,25 @@ fi
 
 query_upgrade
 init_procs stop
-if [ "${rollback}" == "True" ] ; then
+if [ "${postupgrade}" == "downgrade" ] ; then
+        if [ -d /usr/lib/hadoop-${new_hadoop_ver} ] ; then
+                rm /usr/lib/hadoop
+                ln -s /usr/lib/hadoop-${new_hadoop_ver} /usr/lib/hadoop
+                if [ -d /usr/lib/hadoop-${current_hadoop_ver}/logs ] ; then
+                        mv /usr/lib/hadoop-${current_hadoop_ver}/logs /usr/lib/hadoop/
+                fi
+                action-set newhadoop.rollback="successfully downgraded"
+                status-set active "Ready - downgradeto ${new_hadoop_ver} complete"
+                init_procs start
+                exit 0
+        else
+                action-set newhadoop.rollback="previous version not found, unpacking..."
+                status-set active "previous version not found, unpacking..."
+        fi
+fi
+
+if [ "${postupgrade}" == "rollback" ] ; then
+        su hdfs -c "stop-dfs.sh"
         if [ -d /usr/lib/hadoop-${new_hadoop_ver} ] ; then
                 rm /usr/lib/hadoop
                 ln -s /usr/lib/hadoop-${new_hadoop_ver} /usr/lib/hadoop

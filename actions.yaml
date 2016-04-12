@@ -15,4 +15,8 @@ hadoop-upgrade:
       type: boolean
       description: true or false - defaults to false
       default: false
+    postupgrade:
+      type: string
+      description: finalize, downgrade or rollback
+      enum: [finalize, downgrade, rollback]
   required: [version, rollback]
