@@ -10,7 +10,32 @@ config_hadoop_ver=`config-get hadoop_version`
 new_hadoop_ver=`action-get version`
 cpu_arch=`lscpu|grep -i arch|awk '{print $2}'`
 rollback=`action-get rollback`
+prepare=`action-get prepare`
+query=`action-get query`
 
+function query_upgrade () {
+        # check upgrade, if not ready / prepared set failure message and exit
+        if ! [ `su hdfs -c "hdfs dfsadmin -rollingUpgrade query"|grep -i "Proceed with rolling upgrade"` ] ; then
+                action-set result="Rolling upgrade has not been prepared, see documentation"       
+                status-set "Rolling upgrade not prepared, see docs"
+                exit 1
+        fi
+}
+
+if [ "$prepare" == true ] ; then
+# check jps to see if namenode is running, if not exit
+        su hdfs -c "hdfs dfsadmin -rollingUpgrade prepare"
+        exit 0
+fi
+
+if [ "$query" == true ] ; then
+# check jps to see if namenode is running, if not exit
+        query_upgrade
+        action-set result="Upgrade prepared"
+        status-set "Upgrade prepared"
+        exit 0
+fi
+        
 function init_procs () { 
         # stop or start hadoop procs (jps procs)
         if [ $1 == "stop" ] ; then
@@ -22,12 +47,16 @@ function init_procs () {
         fi
         for proc in ${hadoop_procs[@]} ; do 
                 if [ $proc == "NameNode" ] && [ $1 == "start" ] ; then
+                        query_upgrade
                         su hdfs -c "hdfs namenode -rollingUpgrade started &" 
                 else
                         su hdfs -c "hadoop-daemon.sh $1 $proc"
                 fi
         done
         sleep 2
+        if [ $1 == "stop" ] ; then
+                check_procs
+        fi
 }
 
 function check_procs () {
@@ -50,6 +79,7 @@ if [ "$new_hadoop_ver" == "$current_hadoop_ver" ] ; then
         exit 1
 fi
 
+query_upgrade
 init_procs stop
 if [ "${rollback}" == "True" ] ; then
         if [ -d /usr/lib/hadoop-${new_hadoop_ver} ] ; then

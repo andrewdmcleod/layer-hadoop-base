@@ -7,4 +7,12 @@ hadoop-upgrade:
     rollback:
       type: boolean
       description: true or false - defaults to false
+    prepare:
+      type: boolean
+      description: true or false - defaults to false
+      default: false
+    query:
+      type: boolean
+      description: true or false - defaults to false
+      default: false
   required: [version, rollback]
