@@ -21,7 +21,11 @@ function init_procs () {
                 done < <(sudo jps|grep -vi jps)
         fi
         for proc in ${hadoop_procs[@]} ; do 
-                su hdfs -c "hadoop-daemon.sh $1 $proc"
+                if [ $proc == "NameNode" ] && [ $1 == "start" ] ; then
+                        su hdfs -c "hdfs namenode -rollingUpgrade started &" 
+                else
+                        su hdfs -c "hadoop-daemon.sh $1 $proc"
+                fi
         done
         sleep 2
 }
