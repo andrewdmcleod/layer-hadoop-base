@@ -44,7 +44,7 @@ function init_procs () {
                         su hdfs -c "hadoop-daemon.sh start namenode"
                 elif [ $proc == "DataNode" ] && [ $1 == "stop" ] ; then
                         query_upgrade
-                        su hdfs -c "hdfs dfsadmin -shutdownDatanode localhost upgrade"
+                        su hdfs -c "hdfs dfsadmin -shutdownDatanode localhost:50020 upgrade"
                 else
                         if [ $1 == "finalize" ] ; then
                                 su hdfs -c "hadoop-daemon.sh start $proc" 
