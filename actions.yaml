@@ -19,4 +19,9 @@ hadoop-upgrade:
       type: string
       description: finalize, downgrade or rollback
       enum: [finalize, downgrade, rollback]
+    upgradetype:
+      type: string
+      description: HA or standalone upgrade - defaults to HA
+      enum: [ha, standalone]
+      default: 'ha'
   required: [version, rollback]

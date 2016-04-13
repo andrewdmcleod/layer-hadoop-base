@@ -13,6 +13,7 @@ rollback=`action-get rollback`
 prepare=`action-get prepare`
 query=`action-get query`
 postupgrade=`action-get postupgrade`
+upgradetype=`action-get upgradetype`
 
 if [ `jps | grep -i namenode` ] ; then
         is_namenode="true"
@@ -75,6 +76,16 @@ function init_procs () {
                                 else
                                         su $user -c "yarn-daemon.sh start $proc" 
                                 fi
+                                ;;
+                        jobhistoryserver)
+                                user="mapred"
+                                if [ $1 == "stop" ] ; then
+                                        query_upgrade
+                                        su $user -c "mr-jobhistory-daemon.sh stop historyserver"
+                                else
+                                        su $user -c "mr-jobhistory-daemon.sh start historyserver"
+                                fi
+                                ;;
                esac 
         done
         sleep 2
@@ -106,6 +117,7 @@ if [ "${postupgrade}" == "finalize" ] ; then
 fi
 
 if [ "$prepare" == "True" ] ; then
+        if [ "$upgradetype" == "standalone" ] ; then su hdfs -c "hdfs dfsadmin -safemode enter" ; fi
         su hdfs -c "hdfs dfsadmin -rollingUpgrade prepare"
         exit 0
 fi
