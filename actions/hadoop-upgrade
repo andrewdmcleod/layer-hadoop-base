@@ -32,26 +32,50 @@ function init_procs () {
                 i=0
                 unset hadoop_procs
                 while read -r line ; do
-                        hadoop_procs[i]=$(echo $line|awk '{print $2}') ; ((i++)) 
-                done < <(sudo jps|grep -vi jps)
+                        hadoop_procs[$i]=$(echo $line|awk '{print $2}') ; ((i++)) 
+                done < <(jps|grep -vi jps)
         fi
-        for proc in ${hadoop_procs[@]} ; do 
-                if [ $proc == "NameNode" ] && [ $1 == "start" ] && [ "$postupgrade" == "" ] ; then
-                        query_upgrade
-                        su hdfs -c "hdfs namenode -rollingUpgrade started &" 
-                elif [ $proc == "NameNode" ] && [ $1 == "start" ] && [ "${postupgrade}" == "downgrade" ] ; then
-                        query_upgrade
-                        su hdfs -c "hadoop-daemon.sh start namenode"
-                elif [ $proc == "DataNode" ] && [ $1 == "stop" ] ; then
-                        query_upgrade
-                        su hdfs -c "hdfs dfsadmin -shutdownDatanode localhost:50020 upgrade"
-                else
-                        if [ $1 == "finalize" ] ; then
-                                su hdfs -c "hadoop-daemon.sh start $proc" 
-                        else
-                                su hdfs -c "hadoop-daemon.sh $1 $proc"
-                        fi
-                fi
+        for proc in ${hadoop_procs[@],,} ; do 
+                case $proc in
+                        namenode)
+                                user="hdfs"
+                                if [ $1 == "start" ] && [ "$postupgrade" == "" ] ; then
+                                        query_upgrade
+                                        su $user -c "hdfs namenode -rollingUpgrade started &"
+                                elif [ $1 == "start" ] && [ "${postupgrade}" == "downgrade" ] || [ "${postupgrade}" == "finalize" ] ; then
+                                        query_upgrade
+                                        su hdfs -c "hadoop-daemon.sh start namenode"
+                                elif [ $1 == "stop" ] ; then
+                                        su hdfs -c "hadoop-daemon.sh stop namenode"
+                                fi
+                                ;;
+                        journalnode|zkfc)
+                                user="hdfs"
+                                if [ $1 == "stop" ] ; then
+                                        query_upgrade
+                                        su $user -c "hadoop-daemon.sh stop $proc"
+                                else
+                                        su $user -c "hadoop-daemon.sh start $proc"
+                                fi
+                                ;;
+                        datanode)
+                                user="hdfs"
+                                if [ $1 == "stop" ] ; then
+                                        query_upgrade
+                                        su $user -c "hdfs dfsadmin -shutdownDatanode localhost:50020 upgrade"
+                                else
+                                        su $user -c "hadoop-daemon.sh start datanode"
+                                fi
+                                ;;
+                        nodemanager|resourcemanager)
+                                user="yarn"
+                                if [ $1 == "stop" ] ; then
+                                        query_upgrade
+                                        su $user -c "yarn-daemon.sh stop $proc" 
+                                else
+                                        su $user -c "yarn-daemon.sh start $proc" 
+                                fi
+               esac 
         done
         sleep 2
         if [ $1 == "stop" ] ; then
@@ -61,7 +85,7 @@ function init_procs () {
 
 function query_upgrade () {
         # check upgrade, if not ready / prepared set failure message and exit
-        if ! [ `su hdfs -c "hdfs dfsadmin -rollingUpgrade query"|grep -i "Proceed with rolling upgrade"` ] ; then
+        if ! su hdfs -c "hdfs dfsadmin -rollingUpgrade query"|grep -i "Proceed with rolling upgrade" ; then
                 action-set result="Rolling upgrade has not been prepared, see documentation"       
                 status-set "Rolling upgrade not prepared, see docs"
                 exit 1
@@ -76,19 +100,17 @@ if [ "${postupgrade}" == "finalize" ] ; then
         su hdfs -c "hdfs dfsadmin -finalizeUpgrade"
         action-set finalized="true"
         init_procs stop
-        init_procs finalize
+        init_procs start 
         status-set active "Ready - upgrade finalized, rollback unavailable" 
         exit 0
 fi
 
-if [ "$prepare" == true ] ; then
-# check jps to see if namenode is running, if not exit
+if [ "$prepare" == "True" ] ; then
         su hdfs -c "hdfs dfsadmin -rollingUpgrade prepare"
         exit 0
 fi
 
-if [ "$query" == true ] ; then
-# check jps to see if namenode is running, if not exit
+if [ "$query" == "True" ] ; then
         query_upgrade
         action-set result="Upgrade prepared"
         status-set "Upgrade prepared"
