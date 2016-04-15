@@ -130,6 +130,7 @@ if [ "${postupgrade}" == "finalize" ] ; then
                 exit 1
         fi
         su hdfs -c "hdfs dfsadmin -finalizeUpgrade"
+        su hdfs -c "hdfs dfsadmin -rollingUpgrade finalize"
         if [ "$?" == 0 ] ; then 
                 action-set finalized="true"
         else
