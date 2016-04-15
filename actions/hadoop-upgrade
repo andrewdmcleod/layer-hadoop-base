@@ -113,7 +113,7 @@ function query_upgrade () {
 }
 
 if [ "${postupgrade}" == "finalize" ] ; then
-        if [ $is_namenode = "false" ] ; then
+        if [ $is_namenode == "false" ] ; then
                 action-set result="Namenode process not detected - please run this action against both namenodes"  
                 exit 1
         fi
