@@ -15,17 +15,25 @@ query=`action-get query`
 postupgrade=`action-get postupgrade`
 upgradetype=`action-get upgradetype`
 
-if [ `jps | grep -i namenode` ] ; then
+if jps | grep -i namenode ; then
         is_namenode="true"
 else
         is_namenode="false"
 fi
 
-if [ `jps | grep -i datanode` ] ; then
+if jps | grep -i datanode ; then
         is_datanode="true"
 else
         is_datanode="false"
 fi
+
+function check_procs () {
+        if pgrep -f Dproc_ ; then
+                action-set result="hadoop process detected, upgrade aborted"
+                status-set active "hadoop process detected, upgrade aborted"
+                exit 1
+        fi
+}
 
 function init_procs () { 
         # stop or start hadoop procs (jps procs)
@@ -118,7 +126,11 @@ if [ "${postupgrade}" == "finalize" ] ; then
                 exit 1
         fi
         su hdfs -c "hdfs dfsadmin -finalizeUpgrade"
-        action-set finalized="true"
+        if [ "$?" == 0 ] ; then 
+                action-set finalized="true"
+        else
+                action-set finalized="false"
+        fi
         init_procs stop
         init_procs start 
         status-set active "Ready - upgrade finalized, rollback unavailable" 
@@ -140,13 +152,6 @@ fi
         
 
 
-function check_procs () {
-        if pgrep -f Dproc_ ; then
-                action-set result="hadoop process detected, upgrade aborted"
-                status-set active "hadoop process detected, upgrade aborted"
-                exit 1
-        fi
-}
 
 if ! [ "$new_hadoop_ver" == "$config_hadoop_ver" ] ; then
         action-set result="Version specified does not math configured version, aborting"
