@@ -50,7 +50,16 @@ function init_procs () {
                                         su hdfs -c "hadoop-daemon.sh stop namenode"
                                 fi
                                 ;;
-                        journalnode|zkfc)
+                        dfszkfailovercontroller)
+                                user="hdfs"
+                                if [ $1 == "stop" ] ; then
+                                        query_upgrade
+                                        su $user -c "hadoop-daemon.sh stop zkfc"
+                                else
+                                        su $user -c "hadoop-daemon.sh start zkfc"
+                                fi
+                                ;;
+                        journalnode)
                                 user="hdfs"
                                 if [ $1 == "stop" ] ; then
                                         query_upgrade
