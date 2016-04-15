@@ -1,0 +1,27 @@
+hadoop-upgrade:
+  description: upgrade (or roll back) hadoop to specified version
+  params:
+    version:
+      type: string
+      description: destination hadoop version X.X.X
+    rollback:
+      type: boolean
+      description: true or false - defaults to false
+    prepare:
+      type: boolean
+      description: true or false - defaults to false
+      default: false
+    query:
+      type: boolean
+      description: true or false - defaults to false
+      default: false
+    postupgrade:
+      type: string
+      description: finalize, downgrade or rollback
+      enum: [finalize, downgrade, rollback]
+    upgradetype:
+      type: string
+      description: HA or standalone upgrade - defaults to HA
+      enum: [ha, standalone]
+      default: 'ha'
+  required: [version, rollback]
