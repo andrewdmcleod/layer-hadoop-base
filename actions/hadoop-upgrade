@@ -48,10 +48,14 @@ function init_procs () {
                 case $proc in
                         namenode)
                                 user="hdfs"
-                                if [ $1 == "start" ] && [ "$postupgrade" == "" ] ; then
+                                if [ $1 == "restart" ] ; then
+                                        su $user -c "hadoop-daemon.sh stop namenode"
+                                        sleep 5
+                                        su $user -c "hadoop-daemon.sh start namenode"
+                                elif [ $1 == "start" ] && [ "$postupgrade" == "" ] ; then
                                         query_upgrade
                                         su $user -c "hdfs namenode -rollingUpgrade started &"
-                                elif [ $1 == "start" ] && [ "${postupgrade}" == "downgrade" ] || [ "${postupgrade}" == "finalize" ] ; then
+                                elif [ $1 == "start" ] && [ "${postupgrade}" == "downgrade" ] ; then
                                         query_upgrade
                                         su hdfs -c "hadoop-daemon.sh start namenode"
                                 elif [ $1 == "stop" ] ; then
@@ -131,8 +135,7 @@ if [ "${postupgrade}" == "finalize" ] ; then
         else
                 action-set finalized="false"
         fi
-        init_procs stop
-        init_procs start 
+        init_procs restart 
         status-set active "Ready - upgrade finalized, rollback unavailable" 
         exit 0
 fi
