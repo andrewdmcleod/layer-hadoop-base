@@ -13,15 +13,18 @@ prepare=`action-get prepare`
 query=`action-get query`
 postupgrade=`action-get postupgrade`
 standalone=`action-get standalone`
+forceupgrade=`action-get forceupgrade`
 
 if jps | grep -i namenode ; then
         is_namenode="true"
+        chlp unitdata set is.namenode true
 else
         is_namenode="false"
 fi
 
 if jps | grep -i datanode ; then
         is_datanode="true"
+        chlp unitdata set is.datanode true
 else
         is_datanode="false"
 fi
@@ -149,13 +152,14 @@ fi
 if [ "$prepare" == "True" ] ; then
         if [ "$standalone" == "True" ] ; then su hdfs -c "hdfs dfsadmin -safemode enter" ; fi
         su hdfs -c "hdfs dfsadmin -rollingUpgrade prepare"
+        action-set result="Upgrade image prepared - proceed with rolling upgrade"
+        status-set active "Upgrade image prepared - proceed with rolling upgrade"
         exit 0
 fi
 
 if [ "$query" == "True" ] ; then
         query_upgrade
         action-set result="Upgrade prepared"
-        status-set "Upgrade prepared"
         exit 0
 fi
         
@@ -163,8 +167,8 @@ fi
 
 
 if ! [ "$new_hadoop_ver" == "$config_hadoop_ver" ] ; then
-        action-set result="Version specified does not math configured version, aborting"
-        action-fail "Version specified does not math configured version"
+        action-set result="Version specified does not match configured version, aborting"
+        action-fail "Version specified does not match configured version"
         exit 1
 fi
 
@@ -174,7 +178,10 @@ if [ "$new_hadoop_ver" == "$current_hadoop_ver" ] ; then
         exit 1
 fi
 
-query_upgrade
+if ! [ "${forceupgrade}" == "True" ] ; then
+        query_upgrade
+fi
+
 if [ "${postupgrade}" == "downgrade" ] ; then
         if [ -d /usr/lib/hadoop-${new_hadoop_ver} ] ; then
                 rm /usr/lib/hadoop
@@ -182,8 +189,9 @@ if [ "${postupgrade}" == "downgrade" ] ; then
                 if [ -d /usr/lib/hadoop-${current_hadoop_ver}/logs ] ; then
                         mv /usr/lib/hadoop-${current_hadoop_ver}/logs /usr/lib/hadoop/
                 fi
-                action-set newhadoop.downgrade="successfully downgraded"
-                status-set active "Ready - downgradeto ${new_hadoop_ver} complete"
+                action-set newhadoop.downgrade="successfully downgraded, ready for finalize"
+                status-set active "Ready - downgrade to ${new_hadoop_ver} complete, ready for finalize"
+                init_procs stop 
                 init_procs start
                 exit 0
         else
@@ -193,7 +201,9 @@ if [ "${postupgrade}" == "downgrade" ] ; then
 fi
 
 if [ "${postupgrade}" == "rollback" ] ; then
-        su hdfs -c "stop-dfs.sh"
+        if is-leader && [ ${is_namenode} == "true" ] ; then
+                su hdfs -c "stop-dfs.sh"
+        fi
         if [ -d /usr/lib/hadoop-${new_hadoop_ver} ] ; then
                 rm /usr/lib/hadoop
                 ln -s /usr/lib/hadoop-${new_hadoop_ver} /usr/lib/hadoop
@@ -201,8 +211,7 @@ if [ "${postupgrade}" == "rollback" ] ; then
                         mv /usr/lib/hadoop-${current_hadoop_ver}/logs /usr/lib/hadoop/
                 fi
                 action-set newhadoop.rollback="successfully rolled back"
-                status-set active "Ready - rollback to ${new_hadoop_ver} complete - ready for hadoop-post-upgrade"
-                init_procs start
+                status-set active "Ready - rollback to ${new_hadoop_ver} complete - ready for rollback_finalize"
                 exit 0
         else
                 action-set newhadoop.rollback="previous version not found, unpacking..."
@@ -210,11 +219,25 @@ if [ "${postupgrade}" == "rollback" ] ; then
         fi
 fi
 
+if [ "${postupgrade}" == "rollback_finalize" ] ; then
+        is_namenode=`chlp unitdata get is.namenode`
+        if [ ${is_namenode} == "true" ] ; then
+                if is-leader ; then
+                        su hdfs -c "hdfs namenode -rollingUpgrade rollback &"
+                        exit 0 
+                else
+                        sleep 60
+                        su hdfs -c "hdfs namenode -bootstrapStandby"
+                        su hdfs -c "start-dfs.sh -rollback"
+        fi
+fi       
+
+
+
 status-set maintenance "Fetching hadoop-${new_hadoop_ver}-${cpu_arch}"
 juju-resources fetch hadoop-${new_hadoop_ver}-${cpu_arch}
 if [ ! $? -eq 0 ] ; then
         action-set newhadoop.fetch="fail"
-        init_procs start
         exit 1
 fi
 action-set newhadoop.fetch="success"
@@ -223,7 +246,6 @@ status-set maintenance "Verifying hadoop-${new_hadoop_ver}-${cpu_arch}"
 juju-resources verify hadoop-${new_hadoop_ver}-${cpu_arch}
 if [ ! $? -eq 0 ] ; then
         action-set newhadoop.verify="fail"
-        init_procs start
         exit 1
 fi
 action-set newhadoop.verify="success"
@@ -254,6 +276,6 @@ chlp unitdata set hadoop.version ${new_hadoop_ver}
 
 hooks/refresh-spec
 action-set result="complete"
-status-set maintenance "hadoop version ${new_hadoop_ver} installed - ready for hadoop-post-upgrade"
+#status-set maintenance "hadoop version ${new_hadoop_ver} installed - ready for hadoop-post-upgrade"
 init_procs stop
 init_procs start

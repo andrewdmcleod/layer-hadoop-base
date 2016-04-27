@@ -20,4 +20,8 @@ hadoop-upgrade:
       type: boolean 
       description: If False, upgrade an HA cluster without downtime. Otherwise perform standalone upgrade.
       default: false
+    forceupgrade:
+      type: boolean
+      description: Doesn't check if the upgrade has been prepared - just download and switch symlink
+      default: false
   required: [version]
