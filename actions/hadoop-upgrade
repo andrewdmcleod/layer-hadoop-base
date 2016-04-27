@@ -63,21 +63,21 @@ function init_procs () {
                                         su hdfs -c "hadoop-daemon.sh stop namenode"
                                 fi
                                 ;;
-                        dfszkfailovercontroller)
+                        disabled_dfszkfailovercontroller)
                                 user="hdfs"
-                                if [ $1 == "stop" ] ; then
-                                        su $user -c "hadoop-daemon.sh stop zkfc"
-                                else
-                                        su $user -c "hadoop-daemon.sh start zkfc"
-                                fi
+                                #if [ $1 == "stop" ] ; then
+                                #        su $user -c "hadoop-daemon.sh stop zkfc"
+                                #else
+                                #        su $user -c "hadoop-daemon.sh start zkfc"
+                                #fi
                                 ;;
-                        journalnode)
+                        disabled_journalnode)
                                 user="hdfs"
-                                if [ $1 == "stop" ] ; then
-                                        su $user -c "hadoop-daemon.sh stop $proc"
-                                else
-                                        su $user -c "hadoop-daemon.sh start $proc"
-                                fi
+                                #if [ $1 == "stop" ] ; then
+                                #        su $user -c "hadoop-daemon.sh stop $proc"
+                                #else
+                                #        su $user -c "hadoop-daemon.sh start $proc"
+                                #fi
                                 ;;
                         datanode)
                                 user="hdfs"
@@ -190,7 +190,7 @@ if [ "${postupgrade}" == "downgrade" ] ; then
         fi
 fi
 
-if [ "${postupgrade}" == "rollback" ] ; then
+if [ "${postupgrade}" == "disabled_rollback" ] ; then
         if is-leader && [ ${is_namenode} == "true" ] ; then
                 su hdfs -c "stop-dfs.sh"
         fi
@@ -209,7 +209,7 @@ if [ "${postupgrade}" == "rollback" ] ; then
         fi
 fi
 
-if [ "${postupgrade}" == "rollback_finalize" ] ; then
+if [ "${postupgrade}" == "disabled_rollback_finalize" ] ; then
         is_namenode=`chlp unitdata get is.namenode`
         if [ ${is_namenode} == "true" ] ; then
                 if is-leader ; then
