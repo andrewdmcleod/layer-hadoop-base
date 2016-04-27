@@ -14,8 +14,8 @@ hadoop-upgrade:
       default: false
     postupgrade:
       type: string
-      description: finalize, downgrade or rollback
-      enum: [finalize, downgrade, rollback]
+      description: finalize, downgrade, rollback and finalize_rollback
+      enum: [finalize, downgrade, rollback, finalize_rollback]
     standalone:
       type: boolean 
       description: If False, upgrade an HA cluster without downtime. Otherwise perform standalone upgrade.
