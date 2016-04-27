@@ -116,7 +116,7 @@ function query_upgrade () {
         if [ "$standalone" == "False" ] ; then
                 if ! su hdfs -c "hdfs dfsadmin -rollingUpgrade query"|grep -i "Proceed with rolling upgrade" ; then
                         action-set result="Rolling upgrade has not been prepared, see documentation"       
-                        status-set "Rolling upgrade not prepared, see docs"
+                        status-set active "Rolling upgrade not prepared, see docs"
                         exit 1
                 fi
         fi
