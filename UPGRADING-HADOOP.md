@@ -27,6 +27,7 @@ cause an HDFS outage. Further instructions for restarting these daemons after an
 upgrade are provided in the action definitions in: the datanode layer (for
 journalnode) and the namenode layer for zkfc.
 
+You can run the 'list-versions' action to see which versions are available to upgrade to.
 
 ### Upgrade (HA)
 
