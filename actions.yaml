@@ -25,3 +25,5 @@ hadoop-upgrade:
       description: Doesn't check if the upgrade has been prepared - just download resource and switch symlink
       default: false
   required: [version]
+list-versions:
+  description: list available versions of hadoop

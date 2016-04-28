@@ -1,0 +1,3 @@
+#!/bin/bash
+action-set versions.x86=`cat ../resources.yaml |egrep "([0-9]{1,}\.)+[0-9]{1,}"|grep -v lzo|grep url|awk -F'/' '{print $6 "-" $7}'|awk -F'-' '{print $1 " - " $3}'|grep x86`
+action-set versions.ppc=`cat ../resources.yaml |egrep "([0-9]{1,}\.)+[0-9]{1,}"|grep -v lzo|grep url|awk -F'/' '{print $6 "-" $7}'|awk -F'-' '{print $1 " - " $3}'|grep ppc`
