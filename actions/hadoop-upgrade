@@ -29,14 +29,6 @@ else
         is_datanode="false"
 fi
 
-function check_procs () {
-        if pgrep -f Dproc_ ; then
-                action-set result="hadoop process detected, upgrade aborted"
-                status-set active "hadoop process detected, upgrade aborted"
-                exit 1
-        fi
-}
-
 function init_procs () { 
         # stop or start hadoop procs (jps procs)
         if [ $1 == "stop" ] ; then
@@ -62,22 +54,6 @@ function init_procs () {
                                 elif [ $1 == "stop" ] ; then
                                         su hdfs -c "hadoop-daemon.sh stop namenode"
                                 fi
-                                ;;
-                        disabled_dfszkfailovercontroller)
-                                user="hdfs"
-                                #if [ $1 == "stop" ] ; then
-                                #        su $user -c "hadoop-daemon.sh stop zkfc"
-                                #else
-                                #        su $user -c "hadoop-daemon.sh start zkfc"
-                                #fi
-                                ;;
-                        disabled_journalnode)
-                                user="hdfs"
-                                #if [ $1 == "stop" ] ; then
-                                #        su $user -c "hadoop-daemon.sh stop $proc"
-                                #else
-                                #        su $user -c "hadoop-daemon.sh start $proc"
-                                #fi
                                 ;;
                         datanode)
                                 user="hdfs"
@@ -106,9 +82,6 @@ function init_procs () {
                esac 
         done
         sleep 2
-        if [ $1 == "stop" ] ; then
-                check_procs
-        fi
 }
 
 function query_upgrade () {
@@ -173,6 +146,9 @@ if ! [ "${forceupgrade}" == "True" ] ; then
 fi
 
 if [ "${postupgrade}" == "downgrade" ] ; then
+        if [ "${standalone}" == "False" ] ; then
+                query_upgrade
+        fi
         if [ -d /usr/lib/hadoop-${new_hadoop_ver} ] ; then
                 rm /usr/lib/hadoop
                 ln -s /usr/lib/hadoop-${new_hadoop_ver} /usr/lib/hadoop
@@ -185,8 +161,12 @@ if [ "${postupgrade}" == "downgrade" ] ; then
                 init_procs start
                 exit 0
         else
-                action-set newhadoop.downgrade="previous version not found, unpacking..."
-                status-set active "previous version not found, unpacking..."
+                if [ "${forceupgrade}" == "False" ] ; then
+                        action-set newhadoop.downgrade="previous version not found, aborting"
+                        action-fail "previous version not found, cannot downgrade - try forcing"
+                        status-set active "previous version not found, aborting"
+                        exit 1
+                fi
         fi
 fi
 
@@ -219,6 +199,7 @@ if [ "${postupgrade}" == "disabled_rollback_finalize" ] ; then
                         sleep 60
                         su hdfs -c "hdfs namenode -bootstrapStandby"
                         su hdfs -c "start-dfs.sh -rollback"
+                        exit 0
                 fi
         fi
 fi       
@@ -267,6 +248,6 @@ chlp unitdata set hadoop.version ${new_hadoop_ver}
 
 hooks/refresh-spec
 action-set result="complete"
-#status-set maintenance "hadoop version ${new_hadoop_ver} installed - ready for hadoop-post-upgrade"
+status-set maintenance "hadoop version ${new_hadoop_ver} installed"
 init_procs stop
 init_procs start

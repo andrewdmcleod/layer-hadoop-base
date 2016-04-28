@@ -1,27 +1,27 @@
 hadoop-upgrade:
-  description: upgrade (or roll back) hadoop to specified version
+  description: upgrade (or downgrade) hadoop to specified version
   params:
     version:
       type: string
-      description: destination hadoop version X.X.X
+      description: destination hadoop version X.X.X, e.g. 2.7.2
     prepare:
       type: boolean
-      description: true or false - defaults to false
+      description: Must be run first - prepares fsimage backup
       default: false
     query:
       type: boolean
-      description: true or false - defaults to false
+      description: Check if the fsimage backup is ready
       default: false
     postupgrade:
       type: string
-      description: finalize, downgrade, rollback and finalize_rollback
-      enum: [finalize, downgrade, rollback, finalize_rollback]
+      description: Should be specified after an upgrade
+      enum: [finalize, downgrade, rollback, rollback_finalize]
     standalone:
       type: boolean 
       description: If False, upgrade an HA cluster without downtime. Otherwise perform standalone upgrade.
       default: false
     forceupgrade:
       type: boolean
-      description: Doesn't check if the upgrade has been prepared - just download and switch symlink
+      description: Doesn't check if the upgrade has been prepared - just download resource and switch symlink
       default: false
   required: [version]
