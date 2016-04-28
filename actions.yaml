@@ -18,7 +18,7 @@ hadoop-upgrade:
       enum: [finalize, downgrade, rollback, rollback_finalize]
     standalone:
       type: boolean 
-      description: If False, upgrade an HA cluster without downtime. Otherwise perform standalone upgrade.
+      description: If False, upgrade an HA cluster without downtime. Otherwise perform non-HA upgrade.
       default: false
     forceupgrade:
       type: boolean
