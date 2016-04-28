@@ -1,4 +1,3 @@
-UPGRADING-HADOOP.md                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
 # Hadoop Upgrade
 ## Actions and Instructions
 
@@ -48,10 +47,10 @@ Here are the general steps:
 1. Set hadoop_version config value for each service:
 
 
-    version=2.7.2
-    juju set namenode hadoop_version=$version
-    juju set resourcemanager hadoop_version=$version
-    juju set slave hadoop_version=$version
+        version=2.7.2
+        juju set namenode hadoop_version=$version
+        juju set resourcemanager hadoop_version=$version
+        juju set slave hadoop_version=$version
 
 2. Prepare the rolling upgrade:
 
