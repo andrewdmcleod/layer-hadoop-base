@@ -117,7 +117,7 @@ This is a fairly straight forward action and can be run on only one of the
 namenodes - this restarts the namenode daemons in 'normal' mode, but we
 recommend running it on both your namenodes to force those daemons to restart:
 
-        juju action do namenode/$a hadoop-upgrade version=$version postupgrade=finalize
+        juju action do namenode/0 hadoop-upgrade version=$version postupgrade=finalize
 
 One reason finalize should be run is that any files deleted after 'prepare' and
 before 'finalize' will remain (hidden) in your HDFS filesystem - therefore deleting
@@ -151,29 +151,29 @@ recommended process is:
 
 ### Action parameters
 
-   version:
-     type: string
-     description: destination hadoop version X.X.X, e.g. 2.7.2
-   prepare:
-     type: boolean
-     description: Must be run first - prepares fsimage backup
-     default: false
-   query:
-     type: boolean
-     description: Check if the fsimage backup is ready
-     default: false
-   postupgrade:
-     type: string
-     description: Should be specified after an upgrade
-     enum: [finalize, downgrade, rollback, rollback_finalize]
-   standalone:
-     type: boolean
-     description: If False, upgrade an HA cluster without downtime. Otherwise perform standalone upgrade.
-     default: false
-   forceupgrade:
-     type: boolean
-     description: Does not check if the upgrade has been prepared - just download resource and switch symlink
-     default: false
+           version:
+             type: string
+             description: destination hadoop version X.X.X, e.g. 2.7.2
+           prepare:
+             type: boolean
+             description: Must be run first - prepares fsimage backup
+             default: false
+           query:
+             type: boolean
+             description: Check if the fsimage backup is ready
+             default: false
+           postupgrade:
+             type: string
+             description: Should be specified after an upgrade
+             enum: [finalize, downgrade, rollback, rollback_finalize]
+           standalone:
+             type: boolean
+             description: If False, upgrade an HA cluster without downtime. Otherwise perform standalone upgrade.
+             default: false
+           forceupgrade:
+             type: boolean
+             description: Does not check if the upgrade has been prepared - just download resource and switch symlink
+             default: false
 
 
 ## Contact Information
