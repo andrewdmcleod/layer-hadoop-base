@@ -55,30 +55,37 @@ Here are the general steps:
 2. Prepare the rolling upgrade:
 
 
-    juju action do namenode/0 hadoop-upgrade version=$version prepare=true
+        juju action do namenode/0 hadoop-upgrade version=$version prepare=true
 
 At this point HDFS will create a fsimage for rollback. You should wait for this process
 to finish before proceeding to the next step. The hadoop-upgrade prepare action above will
 report "Upgrade image prepared - proceed with rolling upgrade" as soon as the
 rollback image is created.
 
-   juju action fetch <jobId>
+        juju action fetch <jobId>
 
 3. Upgrade namenodes:
 
 In an HA configuration, zookeeper will handle active/standby states - you should make the first namenode is 'up' before upgrading the second.
 
 
-    juju action do namenode/0 hadoop-upgrade version=$version
-    juju action do namenode/1 hadoop-upgrade version=$version
+        juju action do namenode/0 hadoop-upgrade version=$version
+        juju action do namenode/1 hadoop-upgrade version=$version
 
 
 4. Upgrade datanodes:
 
 
-    juju action do slave/0 hadoop-upgrade version=$version
-    juju action do slave/1 hadoop-upgrade version=$version
-    juju action do slave/2 hadoop-upgrade version=$version
+        juju action do slave/0 hadoop-upgrade version=$version
+        juju action do slave/1 hadoop-upgrade version=$version
+        juju action do slave/2 hadoop-upgrade version=$version
+
+
+5. Upgrade other components:
+
+The hadoop-upgrade action will work with any charm which incorporates it but you may need to manually restart daemons - resourcemanager 
+daemons will be restarted by the hadoop-upgrade action
+
 
 If data persistence is important to you, you should upgrade a subset of your
 slaves/datanodes, perform some tests (e.g. check existing data) and then
@@ -110,7 +117,7 @@ This is a fairly straight forward action and can be run on only one of the
 namenodes - this restarts the namenode daemons in 'normal' mode, but we
 recommend running it on both your namenodes to force those daemons to restart:
 
-    juju action do namenode/$a hadoop-upgrade version=$version postupgrade=finalize
+        juju action do namenode/$a hadoop-upgrade version=$version postupgrade=finalize
 
 One reason finalize should be run is that any files deleted after 'prepare' and
 before 'finalize' will remain (hidden) in your HDFS filesystem - therefore deleting
@@ -124,20 +131,20 @@ recommended process is:
 
 1. Set hadoop_version config value for each service:
 
-       version=2.7.1
-       juju set namenode hadoop_version=$version
-       juju set slave hadoop_version=$version
+        version=2.7.1
+        juju set namenode hadoop_version=$version
+        juju set slave hadoop_version=$version
 
 2. Downgrade datanodes:
 
-       juju action do slave/0 hadoop-upgrade version=$version postupgrade=downgrade
-       juju action do slave/1 hadoop-upgrade version=$version postupgrade=downgrade
-       juju action do slave/2 hadoop-upgrade version=$version postupgrade=downgrade
+        juju action do slave/0 hadoop-upgrade version=$version postupgrade=downgrade
+        juju action do slave/1 hadoop-upgrade version=$version postupgrade=downgrade
+        juju action do slave/2 hadoop-upgrade version=$version postupgrade=downgrade
 
 3. Downgrade both namenodes:
 
-       juju action do namenode/0 hadoop-upgrade version=$version postupgrade=downgrade
-       juju action do namenode/1 hadoop-upgrade version=$version postupgrade=downgrade
+        juju action do namenode/0 hadoop-upgrade version=$version postupgrade=downgrade
+        juju action do namenode/1 hadoop-upgrade version=$version postupgrade=downgrade
 
 ***Once the downgrade is complete, you must still finalize the rolling upgrade***
 
