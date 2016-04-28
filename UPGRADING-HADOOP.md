@@ -10,7 +10,7 @@ which comes with 2.7.2)
 The actions and the commands they run are in line with the instructions and
 recommendations in this document:
 
-http://hadoop.apache.org/docs/r2.7.2/hadoop-project-dist/hadoop-HDFS/HDFSRollingUpgrade.html
+http://hadoop.apache.org/docs/r2.7.2/hadoop-project-dist/hadoop-hdfs/HdfsRollingUpgrade.html
 
 Therefore, when upgrading a namenode, datanode or resourcemanager, the following
 daemons will be stopped/started: 
@@ -45,21 +45,37 @@ Here are the general steps:
 
 1. Set hadoop_version config value for each service:
 
-
     version=2.7.2
     juju set namenode hadoop_version=$version
+    juju set resourcemanager hadoop_version=$version
     juju set slave hadoop_version=$version
+
 2. Prepare the rolling upgrade:
 
-
     juju action do namenode/0 hadoop-upgrade version=$version prepare=true
+
+At this point HDFS will create a fsimage for rollback. You should wait for this process
+to finish before proceeding to the next step. The hadoop-upgrade prepare action above will
+report "Upgrade image prepared - proceed with rolling upgrade" as soon as the
+rollback image is created.  
+
+    juju action fetch <jobId>
+
 3. Upgrade both namenodes:
 
+First you need to upgrade the standby namenode. To do so identify the unit that acts
+as standby and then trigger the upgrade. Assuming namenode/1 is the standby one: 
 
     juju action do namenode/0 hadoop-upgrade version=$version
-    juju action do namenode/1 hadoop-upgrade version=$version 
-4. Upgrade datanodes:
 
+After the upgrade of the standby namenode is finished trigger the upgrade to
+the active namenode:
+
+    juju action do namenode/1 hadoop-upgrade version=$version 
+
+This may trigger the switch of the standby node to active. 
+
+4. Upgrade datanodes:
 
     juju action do slave/0 hadoop-upgrade version=$version
     juju action do slave/1 hadoop-upgrade version=$version
@@ -80,9 +96,11 @@ still finalize***)
 and restore HDFS file system to the state it was in when 'prepare' was run. 
 
 
-### Upgrade (standalone)
+### Upgrade (non-HA)
 
-  While we do not officially support the upgrade of a standalone deployment, it is possible using the following steps:
+Upgrading under non-HA requirements simplifies the upgrade process since
+the namenode(s) can all be upgraded at the same time. You can follow
+the instructions for HA as described above and use the standalone=true parameter:
 
   1. Config set version
   2. Prepare rolling upgrade
@@ -109,12 +127,11 @@ recommended process is:
 
 1. Set hadoop_version config value for each service:
 
-
     version=2.7.1
     juju set namenode hadoop_version=$version
     juju set slave hadoop_version=$version
-2. Downgrade datanodes:
 
+2. Downgrade datanodes:
 
     juju action do slave/0 hadoop-upgrade version=$version postupgrade=downgrade
     juju action do slave/1 hadoop-upgrade version=$version postupgrade=downgrade
@@ -122,16 +139,10 @@ recommended process is:
     
 3. Downgrade both namenodes:
 
-
     juju action do namenode/0 hadoop-upgrade version=$version postupgrade=downgrade
     juju action do namenode/1 hadoop-upgrade version=$version postupgrade=downgrade
 
 ***Once the downgrade is complete, you must still finalize the rolling upgrade***
-
-
-### Rollback
-
-Not yet supported - coming soon.
 
 
 ### Action parameters
@@ -159,15 +170,6 @@ Not yet supported - coming soon.
       type: boolean
       description: Doesn't check if the upgrade has been prepared - just download resource and switch symlink
       default: false
-
-
-
-
-### To do
-
-HDFS filesystem version upgrade
-
-
 
 
 ## Contact Information

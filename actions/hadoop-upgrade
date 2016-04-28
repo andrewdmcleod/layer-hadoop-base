@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 action-set charmdir.before=${CHARM_DIR}
 export SAVEPATH=$PATH
 . /etc/environment
@@ -29,16 +30,16 @@ else
         is_datanode="false"
 fi
 
-function init_procs () { 
+function init_procs () {
         # stop or start hadoop procs (jps procs)
         if [ $1 == "stop" ] ; then
                 i=0
                 unset hadoop_procs
                 while read -r line ; do
-                        hadoop_procs[$i]=$(echo $line|awk '{print $2}') ; ((i++)) 
+                        hadoop_procs[$i]=$(echo $line|awk '{print $2}') ; ((i++))
                 done < <(jps|grep -vi jps)
         fi
-        for proc in ${hadoop_procs[@],,} ; do 
+        for proc in ${hadoop_procs[@],,} ; do
                 case $proc in
                         namenode)
                                 user="hdfs"
@@ -79,7 +80,7 @@ function init_procs () {
                                         su $user -c "mr-jobhistory-daemon.sh start historyserver"
                                 fi
                                 ;;
-               esac 
+               esac
         done
         sleep 2
 }
@@ -88,7 +89,7 @@ function query_upgrade () {
         # check upgrade, if not ready / prepared set failure message and exit
         if [ "$standalone" == "False" ] ; then
                 if ! su hdfs -c "hdfs dfsadmin -rollingUpgrade query"|grep -i "Proceed with rolling upgrade" ; then
-                        action-set result="Rolling upgrade has not been prepared, see documentation"       
+                        action-set result="Rolling upgrade has not been prepared, see documentation"
                         status-set active "Rolling upgrade not prepared, see docs"
                         exit 1
                 fi
@@ -98,20 +99,20 @@ function query_upgrade () {
 if [ "${postupgrade}" == "finalize" ] ; then
         if [ "$standalone" == "True" ] ; then
                 su hdfs -c "hadoop-daemon.sh start namenode"
-        fi 
+        fi
         if [ $is_namenode == "false" ] ; then
-                action-set result="Namenode process not detected - please run this action on both namenodes"  
+                action-set result="Namenode process not detected - please run this action on both namenodes"
                 exit 1
         fi
         su hdfs -c "hdfs dfsadmin -finalizeUpgrade"
         su hdfs -c "hdfs dfsadmin -rollingUpgrade finalize"
-        if [ "$?" == 0 ] ; then 
+        if [ "$?" == 0 ] ; then
                 action-set finalized="true"
         else
                 action-set finalized="false"
         fi
-        init_procs restart 
-        status-set active "Ready - upgrade finalized, downgrade or rollback unavailable" 
+        init_procs restart
+        status-set active "Ready - upgrade finalized, downgrade or rollback unavailable"
         exit 0
 fi
 
@@ -128,7 +129,7 @@ if [ "$query" == "True" ] ; then
         action-set result="Upgrade prepared"
         exit 0
 fi
-        
+
 if ! [ "$new_hadoop_ver" == "$config_hadoop_ver" ] ; then
         action-set result="Version specified does not match configured version, aborting"
         action-fail "Version specified does not match configured version"
@@ -157,7 +158,7 @@ if [ "${postupgrade}" == "downgrade" ] ; then
                 fi
                 action-set newhadoop.downgrade="successfully downgraded, ready for finalize"
                 status-set active "Ready - downgrade to ${new_hadoop_ver} complete, ready for finalize"
-                init_procs stop 
+                init_procs stop
                 init_procs start
                 exit 0
         else
@@ -194,7 +195,7 @@ if [ "${postupgrade}" == "disabled_rollback_finalize" ] ; then
         if [ ${is_namenode} == "true" ] ; then
                 if is-leader ; then
                         su hdfs -c "hadoop-daemon.sh start namenode -rollingUpgrade rollback"
-                        exit 0 
+                        exit 0
                 else
                         sleep 60
                         su hdfs -c "hdfs namenode -bootstrapStandby"
@@ -202,8 +203,7 @@ if [ "${postupgrade}" == "disabled_rollback_finalize" ] ; then
                         exit 0
                 fi
         fi
-fi       
-
+fi
 
 
 status-set maintenance "Fetching hadoop-${new_hadoop_ver}-${cpu_arch}"
