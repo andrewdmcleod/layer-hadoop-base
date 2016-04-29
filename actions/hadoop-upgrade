@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-action-set charmdir.before=${CHARM_DIR}
 export SAVEPATH=$PATH
 . /etc/environment
 export PATH=$PATH:$SAVEPATH
@@ -116,6 +115,18 @@ if [ "${postupgrade}" == "finalize" ] ; then
         exit 0
 fi
 
+if ! [ "$new_hadoop_ver" == "$config_hadoop_ver" ] ; then
+        action-set result="Version specified does not match configured version, aborting"
+        action-fail "Version specified does not match configured version"
+        exit 1
+fi
+
+if [ "$new_hadoop_ver" == "$current_hadoop_ver" ] ; then
+        action-set result="Same version already installed, aborting"
+        action-fail "Same version already installed"
+        exit 1
+fi
+
 if [ "$prepare" == "True" ] ; then
         if [ "$standalone" == "True" ] ; then su hdfs -c "hdfs dfsadmin -safemode enter" ; fi
         su hdfs -c "hdfs dfsadmin -rollingUpgrade prepare"
@@ -128,18 +139,6 @@ if [ "$query" == "True" ] ; then
         query_upgrade
         action-set result="Upgrade prepared"
         exit 0
-fi
-
-if ! [ "$new_hadoop_ver" == "$config_hadoop_ver" ] ; then
-        action-set result="Version specified does not match configured version, aborting"
-        action-fail "Version specified does not match configured version"
-        exit 1
-fi
-
-if [ "$new_hadoop_ver" == "$current_hadoop_ver" ] ; then
-        action-set result="Same version already installed, aborting"
-        action-fail "Same version already installed"
-        exit 1
 fi
 
 if ! [ "${forceupgrade}" == "True" ] ; then
@@ -242,7 +241,6 @@ fi
 if [ -d ${current_hadoop_path}/logs ] ; then
         mv ${current_hadoop_path}/logs ${new_hadoop_path}/
 fi
-action-set charmdir.after=${CHARM_DIR}
 # set hadoop.version in unitdata
 chlp unitdata set hadoop.version ${new_hadoop_ver}
 
